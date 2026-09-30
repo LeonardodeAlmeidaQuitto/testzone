@@ -279,6 +279,43 @@ const normalizarChave = n => { if(!n) return ''; return n.toLowerCase().replace(
 // HELPERS DE LOGO DE TIME
 // ========================================================
 const teamLogoUrl = (id) => `element/teams/${(id || '').toLowerCase()}.png`;
+// ==========================================
+// LIMITE DE FALLBACK DE IMAGENS
+// Evita que brawlers/default.png (ou outros fallbacks)
+// sejam solicitados infinitamente quando a imagem original não existe.
+// Máximo de 10 requisições ao arquivo de fallback por carregamento da página.
+// ==========================================
+let _fallbackImagemCount = 0;
+function fallbackImagem(img, fallback) {
+    if (!img) return;
+
+    // Cada imagem pode tentar o fallback somente uma vez.
+    if (img.dataset.fallbackTentado === '1') {
+        img.onerror = null;
+        img.src = 'about:blank';
+        return;
+    }
+
+    img.dataset.fallbackTentado = '1';
+
+    // Depois de 10 requisições de fallback, não solicita mais default.png.
+    if (_fallbackImagemCount >= 10) {
+        img.onerror = null;
+        img.src = 'about:blank';
+        return;
+    }
+
+    _fallbackImagemCount++;
+    img.onerror = null;
+    img.src = fallback;
+
+    // Se o próprio fallback também não existir, não tenta novamente.
+    img.onerror = function() {
+        this.onerror = null;
+        this.src = 'about:blank';
+    };
+}
+
 const teamLogoFallback = (id) => (id && id.toUpperCase().startsWith('UNK')) ? 'element/teams/unknow.png' : 'element/teams/default.png';
 const teamLogoOnError = (id) => `this.onerror=null; this.src='${teamLogoFallback(id)}';`;
 
@@ -809,7 +846,7 @@ function renderizarMeta() {
                         ${valid.map(([b, s]) => {
                             let bc = bNMap[b] || 0, brPct = tBM ? ((bc / tJM) * 100).toFixed(1) : '0.0';
                             return `<tr>
-                                <td style="text-align:left; font-weight:bold; color:var(#898989); white-space:nowrap; padding:5px 8px;"><img src="brawlers/${formatImg(b)}.png" style="width:24px; vertical-align:middle; margin-right:5px; border-radius:4px;" onerror="this.src='brawlers/default.png'">${b}</td>
+                                <td style="text-align:left; font-weight:bold; color:var(#898989); white-space:nowrap; padding:5px 8px;"><img src="brawlers/${formatImg(b)}.png" style="width:24px; vertical-align:middle; margin-right:5px; border-radius:4px;" onerror="fallbackImagem(this,'brawlers/default.png')">${b}</td>
                                 <td style="padding:5px 8px;">${s.picks}</td><td style="color: #00ffff; padding:5px 8px;">${(totalPicksTabela > 0 ? ((s.picks/totalPicksTabela)*100) : 0).toFixed(1)}%</td><td style="padding:5px 8px;">${s.wins}</td><td style="color: #00ff00; padding:5px 8px;">${((s.wins/s.picks)*100).toFixed(1)}%</td>
                                 <td style="color:#898989; font-weight:bold; padding:5px 8px;">${bc}</td><td style="color:#ff0000; font-weight:bold; padding:5px 8px;">${brPct}%</td>
                             </tr>`;
@@ -827,13 +864,13 @@ function renderizarMeta() {
             let modeKeyReal = Object.keys(sMap).find(m => normalizarChave(m) === normalizarChave(modoConfig)) || null;
             let cleanMode = formatImg(modoConfig);
             let conteudoMapa = mapasConfig.map(mapaConfig => montarCardMapa(modeKeyReal, mapaConfig)).join('');
-            html += `<div class="modo-card" onclick="toggleModoMeta('${cleanMode}')"><img src="element/modes/${cleanMode}.png" style="width:40px; margin-right:15px;" onerror="this.src='element/modes/default.png'">${modoConfig}</div><div id="modo-content-${cleanMode}" class="modo-section" style="display:none; padding:15px;"><div class="mapa-content" style="display:grid; grid-template-columns:repeat(3, minmax(300px, 1fr)); gap:15px; align-items:start;">${conteudoMapa}</div></div>`;
+            html += `<div class="modo-card" onclick="toggleModoMeta('${cleanMode}')"><img src="element/modes/${cleanMode}.png" style="width:40px; margin-right:15px;" onerror="fallbackImagem(this,'element/modes/default.png')">${modoConfig}</div><div id="modo-content-${cleanMode}" class="modo-section" style="display:none; padding:15px;"><div class="mapa-content" style="display:grid; grid-template-columns:repeat(3, minmax(300px, 1fr)); gap:15px; align-items:start;">${conteudoMapa}</div></div>`;
         });
     } else {
         Object.entries(sMap).forEach(([mode, mapasDict]) => {
             let cleanMode = formatImg(mode);
             let conteudoMapa = Object.keys(mapasDict).map(mapa => montarCardMapa(mode, mapa)).join('');
-            if (conteudoMapa !== '') html += `<div class="modo-card" onclick="toggleModoMeta('${cleanMode}')"><img src="element/modes/${cleanMode}.png" style="width:40px; margin-right:15px;" onerror="this.src='element/modes/default.png'">${mode}</div><div id="modo-content-${cleanMode}" class="modo-section" style="display:none; padding:15px;"><div class="mapa-content" style="display:grid; grid-template-columns:repeat(3, minmax(300px, 1fr)); gap:15px; align-items:start;">${conteudoMapa}</div></div>`;
+            if (conteudoMapa !== '') html += `<div class="modo-card" onclick="toggleModoMeta('${cleanMode}')"><img src="element/modes/${cleanMode}.png" style="width:40px; margin-right:15px;" onerror="fallbackImagem(this,'element/modes/default.png')">${mode}</div><div id="modo-content-${cleanMode}" class="modo-section" style="display:none; padding:15px;"><div class="mapa-content" style="display:grid; grid-template-columns:repeat(3, minmax(300px, 1fr)); gap:15px; align-items:start;">${conteudoMapa}</div></div>`;
         });
     }
 
@@ -849,7 +886,7 @@ function renderizarMeta() {
                         let bc = bAll[b] || 0, brPct = jBT.size > 0 ? ((bc / jBT.size) * 100).toFixed(1) : '0.0';
                         let prPct = totalPicksAllMaps > 0 ? ((s.picks/totalPicksAllMaps)*100).toFixed(1) : '0.0';
                         return `<tr>
-                            <td style="text-align:left; font-weight:bold; color:var(--winrate-color)"><img src="brawlers/${formatImg(b)}.png" style="width:28px; vertical-align:middle; margin-right:10px; border-radius:4px;" onerror="this.src='brawlers/default.png'">${b}</td>
+                            <td style="text-align:left; font-weight:bold; color:var(--winrate-color)"><img src="brawlers/${formatImg(b)}.png" style="width:28px; vertical-align:middle; margin-right:10px; border-radius:4px;" onerror="fallbackImagem(this,'brawlers/default.png')">${b}</td>
                             <td>${s.picks}</td><td style="color:var(--texto-secundario);">${prPct}%</td><td>${s.wins}</td><td class="winrate-cell">${((s.wins/s.picks)*100).toFixed(1)}%</td><td style="color:#b06aff; font-weight:bold;">${bc}</td><td style="color:#b06aff; font-weight:bold;">${brPct}%</td>
                         </tr>`;
                     }).join('')}
@@ -874,7 +911,7 @@ function renderizarSidebarBrawlers() {
         sidebar.innerHTML = '';
         listaBrawlers.forEach(b => {
             let div = document.createElement('div'); div.className = 'sidebar-item';
-            div.innerHTML = `<img src="brawlers/${formatImg(b)}.png" style="width:24px; border-radius:4px;" onerror="this.src='brawlers/default.png'"> <span>${b}</span>`;
+            div.innerHTML = `<img src="brawlers/${formatImg(b)}.png" style="width:24px; border-radius:4px;" onerror="fallbackImagem(this,'brawlers/default.png')"> <span>${b}</span>`;
             div.onclick = () => {
                 document.querySelectorAll('#lista-brawlers-sidebar .sidebar-item').forEach(i => i.classList.remove('active'));
                 div.classList.add('active'); brawlerSelecionado = b; renderizarDetalhesBrawler(b);
@@ -939,15 +976,15 @@ function renderizarDetalhesBrawler(brawler) {
     let sinergiasTop   = Object.entries(statsSinergia).map(([nome, s]) => ({ nome, matches: s.matches, wins: s.bwWins, wr: (s.bwWins / s.matches) * 100, pr: (s.matches / totalPicks) * 100 })).filter(m => m.matches >= 1).sort((a,b) => b.matches - a.matches).slice(0,5);
 
     if(painel) painel.innerHTML = `
-        <div class="brawler-profile-header"><img src="brawlers/${formatImg(brawler)}.png" class="brawler-large-avatar" onerror="this.src='brawlers/default.png'"><div><h2 style="font-size:28px;">${brawler}</h2><p style="color:var(--texto-secundario); font-size:14px; font-weight:bold; margin-top:5px;">PICKS: <span style="color:#fff">${totalPicks}</span> | W: <span style="color:#fff">${wins}</span> | WR%: <span class="winrate-cell">${wrGeral}</span> ${totalJogosComBans > 0 ? ` | B: <span style="color:#b06aff">${totalBans}</span> | BR%: <span style="color:#b06aff">${brPct}%</span>` : ''}</p></div></div>
+        <div class="brawler-profile-header"><img src="brawlers/${formatImg(brawler)}.png" class="brawler-large-avatar" onerror="fallbackImagem(this,'brawlers/default.png')"><div><h2 style="font-size:28px;">${brawler}</h2><p style="color:var(--texto-secundario); font-size:14px; font-weight:bold; margin-top:5px;">PICKS: <span style="color:#fff">${totalPicks}</span> | W: <span style="color:#fff">${wins}</span> | WR%: <span class="winrate-cell">${wrGeral}</span> ${totalJogosComBans > 0 ? ` | B: <span style="color:#b06aff">${totalBans}</span> | BR%: <span style="color:#b06aff">${brPct}%</span>` : ''}</p></div></div>
         <h3 style="color:var(--accent-purple); font-size:16px; margin-bottom:15px;">TOP 3 MAPAS (DO BRAWLER)</h3>
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:30px;">
-            ${topMapas.map(([m, s]) => `<div style="background:var(--bg-cards); padding:15px; border-radius:8px; border:1px solid var(--borda-destaque); text-align:center;"><img src="element/maps/${formatImg(m)}.png" style="width:100%; max-width:220px; height:100px; object-fit:cover; border-radius:6px; margin-bottom:10px; border:1px solid var(--borda-suave);" onerror="this.src='element/maps/default.png'"><div style="font-weight:900; font-size:14px; margin-bottom:8px;">${m}</div><div style="font-size:13px; color:var(--texto-secundario); display:flex; justify-content:center; gap:10px;"><span>P: <strong style="color:#fff">${s.picks}</strong></span><span>PR: <strong style="color:#fff">${((s.picks/totalPicks)*100).toFixed(1)}%</strong></span></div><div style="font-size:13px; color:var(--texto-secundario); display:flex; justify-content:center; gap:10px; margin-top:5px;"><span>W: <strong style="color:#fff">${s.wins}</strong></span><span>WR: <strong class="winrate-cell">${((s.wins/s.picks)*100).toFixed(1)}%</strong></span></div></div>`).join('')}
+            ${topMapas.map(([m, s]) => `<div style="background:var(--bg-cards); padding:15px; border-radius:8px; border:1px solid var(--borda-destaque); text-align:center;"><img src="element/maps/${formatImg(m)}.png" style="width:100%; max-width:220px; height:100px; object-fit:cover; border-radius:6px; margin-bottom:10px; border:1px solid var(--borda-suave);" onerror="fallbackImagem(this,'element/maps/default.png')"><div style="font-weight:900; font-size:14px; margin-bottom:8px;">${m}</div><div style="font-size:13px; color:var(--texto-secundario); display:flex; justify-content:center; gap:10px;"><span>P: <strong style="color:#fff">${s.picks}</strong></span><span>PR: <strong style="color:#fff">${((s.picks/totalPicks)*100).toFixed(1)}%</strong></span></div><div style="font-size:13px; color:var(--texto-secundario); display:flex; justify-content:center; gap:10px; margin-top:5px;"><span>W: <strong style="color:#fff">${s.wins}</strong></span><span>WR: <strong class="winrate-cell">${((s.wins/s.picks)*100).toFixed(1)}%</strong></span></div></div>`).join('')}
         </div>
         <div class="synergy-grid">
-            <div class="synergy-box"><h3 style="color:var(--winrate-color); margin-bottom:15px; font-size:14px;">BOM CONTRA (Adversários)</h3>${countersTop.map(c => `<div class="synergy-item"><div style="display:flex; align-items:center;"><img src="brawlers/${formatImg(c.nome)}.png" onerror="this.src='brawlers/default.png'"><span style="font-weight:bold; font-size:13px;">${c.nome}</span></div><div style="text-align:right; font-size:12px; display:flex; gap:10px; font-weight:bold;"><div style="display:flex; flex-direction:column; color:var(--texto-secundario);"><span>P: ${c.matches}</span><span>PR%: ${c.pr.toFixed(1)}%</span></div><div style="display:flex; flex-direction:column;"><span>W: <span style="color:#fff">${c.wins}</span></span><span style="color:var(--winrate-color);">WR%: ${c.wr.toFixed(1)}%</span></div></div></div>`).join('') || '<p style="font-size:12px; color:var(--texto-secundario);">Sem dados</p>'}</div>
-            <div class="synergy-box"><h3 style="color:var(--loss-color); margin-bottom:15px; font-size:14px;">RUIM CONTRA (Adversários)</h3>${counteradosTop.map(c => `<div class="synergy-item"><div style="display:flex; align-items:center;"><img src="brawlers/${formatImg(c.nome)}.png" onerror="this.src='brawlers/default.png'"><span style="font-weight:bold; font-size:13px;">${c.nome}</span></div><div style="text-align:right; font-size:12px; display:flex; gap:10px; font-weight:bold;"><div style="display:flex; flex-direction:column; color:var(--texto-secundario);"><span>P: ${c.matches}</span><span>PR%: ${c.pr.toFixed(1)}%</span></div><div style="display:flex; flex-direction:column;"><span>L: <span style="color:#fff">${c.losses}</span></span><span style="color:var(--loss-color);">WR%: ${c.wr.toFixed(1)}%</span></div></div></div>`).join('') || '<p style="font-size:12px; color:var(--texto-secundario);">Sem dados</p>'}</div>
-            <div class="synergy-box" style="grid-column: 1 / -1;"><h3 style="color:var(--synergy-color); margin-bottom:15px; font-size:14px;">TOP 5 SINERGIAS (Brawlers Juntos)</h3><div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:15px;">${sinergiasTop.map(c => `<div style="background:var(--bg-paineis); padding:15px; border-radius:8px; text-align:center; border:1px solid var(--borda-suave);"><img src="brawlers/${formatImg(c.nome)}.png" style="width:40px; height:40px; border-radius:6px; margin-bottom:8px; object-fit:cover;" onerror="this.src='brawlers/default.png'"><div style="font-weight:900; font-size:14px; margin-bottom:5px;">${c.nome}</div><div style="font-size:12px; color:var(--texto-secundario); font-weight:bold;">P: ${c.matches} | PR%: ${c.pr.toFixed(1)}%</div><div style="font-size:12px; color:var(--texto-secundario); font-weight:bold; margin-top:2px;">W: <span style="color:#fff">${c.wins}</span> | <span style="color:var(--winrate-color)">WR%: ${c.wr.toFixed(1)}%</span></div></div>`).join('') || '<p style="font-size:12px; color:var(--texto-secundario);">Sem dados</p>'}</div></div>
+            <div class="synergy-box"><h3 style="color:var(--winrate-color); margin-bottom:15px; font-size:14px;">BOM CONTRA (Adversários)</h3>${countersTop.map(c => `<div class="synergy-item"><div style="display:flex; align-items:center;"><img src="brawlers/${formatImg(c.nome)}.png" onerror="fallbackImagem(this,'brawlers/default.png')"><span style="font-weight:bold; font-size:13px;">${c.nome}</span></div><div style="text-align:right; font-size:12px; display:flex; gap:10px; font-weight:bold;"><div style="display:flex; flex-direction:column; color:var(--texto-secundario);"><span>P: ${c.matches}</span><span>PR%: ${c.pr.toFixed(1)}%</span></div><div style="display:flex; flex-direction:column;"><span>W: <span style="color:#fff">${c.wins}</span></span><span style="color:var(--winrate-color);">WR%: ${c.wr.toFixed(1)}%</span></div></div></div>`).join('') || '<p style="font-size:12px; color:var(--texto-secundario);">Sem dados</p>'}</div>
+            <div class="synergy-box"><h3 style="color:var(--loss-color); margin-bottom:15px; font-size:14px;">RUIM CONTRA (Adversários)</h3>${counteradosTop.map(c => `<div class="synergy-item"><div style="display:flex; align-items:center;"><img src="brawlers/${formatImg(c.nome)}.png" onerror="fallbackImagem(this,'brawlers/default.png')"><span style="font-weight:bold; font-size:13px;">${c.nome}</span></div><div style="text-align:right; font-size:12px; display:flex; gap:10px; font-weight:bold;"><div style="display:flex; flex-direction:column; color:var(--texto-secundario);"><span>P: ${c.matches}</span><span>PR%: ${c.pr.toFixed(1)}%</span></div><div style="display:flex; flex-direction:column;"><span>L: <span style="color:#fff">${c.losses}</span></span><span style="color:var(--loss-color);">WR%: ${c.wr.toFixed(1)}%</span></div></div></div>`).join('') || '<p style="font-size:12px; color:var(--texto-secundario);">Sem dados</p>'}</div>
+            <div class="synergy-box" style="grid-column: 1 / -1;"><h3 style="color:var(--synergy-color); margin-bottom:15px; font-size:14px;">TOP 5 SINERGIAS (Brawlers Juntos)</h3><div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:15px;">${sinergiasTop.map(c => `<div style="background:var(--bg-paineis); padding:15px; border-radius:8px; text-align:center; border:1px solid var(--borda-suave);"><img src="brawlers/${formatImg(c.nome)}.png" style="width:40px; height:40px; border-radius:6px; margin-bottom:8px; object-fit:cover;" onerror="fallbackImagem(this,'brawlers/default.png')"><div style="font-weight:900; font-size:14px; margin-bottom:5px;">${c.nome}</div><div style="font-size:12px; color:var(--texto-secundario); font-weight:bold;">P: ${c.matches} | PR%: ${c.pr.toFixed(1)}%</div><div style="font-size:12px; color:var(--texto-secundario); font-weight:bold; margin-top:2px;">W: <span style="color:#fff">${c.wins}</span> | <span style="color:var(--winrate-color)">WR%: ${c.wr.toFixed(1)}%</span></div></div>`).join('') || '<p style="font-size:12px; color:var(--texto-secundario);">Sem dados</p>'}</div></div>
         </div>`;
 }
 
@@ -970,12 +1007,7 @@ function renderizarSidebarTimes() {
     } else { timesRegiao = CONFIGURACAO_MANUAL_TIMES[_REGIAO]; }
 
     if(!timesRegiao) return;
-    const usuarioAtual = typeof window.BSC_USER === "function" ? window.BSC_USER() : null;
-    const podeVerTierDesconhecido = usuarioAtual === "admin";
-
     for(let tier in timesRegiao) {
-        // Os times "Unknow" do TIER ? ficam visíveis somente para o admin.
-        if (tier === "TIER ?" && !podeVerTierDesconhecido) continue;
         if(timesRegiao[tier].length === 0) continue;
         let tierHeader = document.createElement('div'); tierHeader.className = 'sidebar-header'; tierHeader.innerText = tier; sidebar.appendChild(tierHeader);
         timesRegiao[tier].forEach(t => {
@@ -988,10 +1020,6 @@ function renderizarSidebarTimes() {
 }
 
 function renderizarDetalhesTime(time) {
-    const eTimeDesconhecido = time && (time.tier === "TIER ?" || /^UNK/i.test(String(time.id_time || "")) || /^Unknow\s/i.test(String(time.nome_time || "")));
-    if (eTimeDesconhecido && (typeof window.BSC_USER !== "function" || window.BSC_USER() !== "admin")) {
-        return;
-    }
     const painel = document.getElementById('painel-info-time');
     let partidasDoTime = dadosFiltrados.filter(r => r.id_time === time.id_time);
     let logoUrl = teamLogoUrl(time.id_time);
@@ -1031,151 +1059,6 @@ function renderizarDetalhesTime(time) {
     partidasDoTime.forEach(r => { let b = (r.pick||'').toUpperCase(); if(b) { timeBrawlers[b] = (timeBrawlers[b] || 0) + 1; } });
     let top10Time = Object.entries(timeBrawlers).sort((a,b) => b[1] - a[1]).slice(0,10);
 
-    // ========================================================
-    // BEST PICKS DO TIME POR MAPA / MODO
-    // ========================================================
-    // O filtro abaixo usa as partidas reais já carregadas em dadosFiltrados.
-    // Assim, os PICKS e WR% mudam de acordo com o time, mês/ano/dia/tipo
-    // e modo selecionado, sem criar dados fictícios.
-    const BEST_PICKS_MODOS = [
-        { nome: 'Brawl Ball' },
-        { nome: 'Gem Grab' },
-        { nome: 'Hot Zone' },
-        { nome: 'Heist' },
-        { nome: 'Bounty' },
-        { nome: 'Knockout' }
-    ];
-
-    function normalizarModoBestPicks(valor) {
-        return String(valor || '')
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^a-z0-9]/g, '');
-    }
-
-    function obterRotacaoBestPicks() {
-        const selectAno = document.getElementById('select-ano');
-        const selectMes = document.getElementById('select-mes');
-        const ano = selectAno ? selectAno.value : 'todos';
-        const mes = selectMes ? selectMes.value : 'todos';
-
-        if (ano !== 'todos' && mes !== 'todos' && ROTACAO_MAPAS[ano] && ROTACAO_MAPAS[ano][mes]) {
-            return { ano, mes, rotacao: ROTACAO_MAPAS[ano][mes] };
-        }
-
-        // Se o mês não estiver selecionado, usa a rotação mais recente cadastrada.
-        const anos = Object.keys(ROTACAO_MAPAS).sort().reverse();
-        for (const a of anos) {
-            const meses = Object.keys(ROTACAO_MAPAS[a]).sort().reverse();
-            if (meses.length) {
-                const m = meses[0];
-                return { ano: a, mes: m, rotacao: ROTACAO_MAPAS[a][m] };
-            }
-        }
-        return { ano: ano === 'todos' ? '—' : ano, mes: mes === 'todos' ? '—' : mes, rotacao: {} };
-    }
-
-    // O estado fica fora do HTML para que o botão de modo possa redesenhar
-    // somente a área BEST PICKS sem perder o time selecionado.
-    if (!window.__BEST_PICKS_MODO) window.__BEST_PICKS_MODO = 'Brawl Ball';
-
-    window.selecionarModoBestPicks = function(modo) {
-        window.__BEST_PICKS_MODO = modo;
-        if (timeSelecionado) renderizarDetalhesTime(timeSelecionado);
-    };
-
-    const rotacaoBest = obterRotacaoBestPicks();
-    const modoAtivoBest = BEST_PICKS_MODOS.some(m => m.nome === window.__BEST_PICKS_MODO)
-        ? window.__BEST_PICKS_MODO
-        : 'Brawl Ball';
-    window.__BEST_PICKS_MODO = modoAtivoBest;
-
-    const mapasRotacaoBest = Array.isArray(rotacaoBest.rotacao[modoAtivoBest])
-        ? rotacaoBest.rotacao[modoAtivoBest].slice(0, 3)
-        : [];
-
-    const partidasModoBest = partidasDoTime.filter(r =>
-        normalizarModoBestPicks(r.modo) === normalizarModoBestPicks(modoAtivoBest)
-    );
-
-    const cardsBestPicks = mapasRotacaoBest.map(mapa => {
-        const partidasMapa = partidasModoBest.filter(r =>
-            String(r.mapa || '').trim().toLowerCase() === mapa.toLowerCase()
-        );
-
-        const statsBrawlers = {};
-        partidasMapa.forEach(r => {
-            const b = String(r.pick || '').trim().toUpperCase();
-            if (!b) return;
-            if (!statsBrawlers[b]) statsBrawlers[b] = { picks: 0, wins: 0 };
-            statsBrawlers[b].picks++;
-            if (parseInt(r.win) === 1) statsBrawlers[b].wins++;
-        });
-
-        const topPicks = Object.entries(statsBrawlers)
-            .sort((a, b) => {
-                if (b[1].picks !== a[1].picks) return b[1].picks - a[1].picks;
-                const wrA = a[1].picks ? a[1].wins / a[1].picks : 0;
-                const wrB = b[1].picks ? b[1].wins / b[1].picks : 0;
-                return wrB - wrA;
-            })
-            .slice(0, 5);
-
-        const conteudo = topPicks.length
-            ? `<div style="display:flex; flex-direction:column; gap:7px;">
-                ${topPicks.map(([b, stats], idx) => {
-                    const wr = stats.picks ? ((stats.wins / stats.picks) * 100).toFixed(1) : '0.0';
-                    return `<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:var(--bg-cards); padding:7px 9px; border-radius:6px; border:1px solid var(--borda-suave);">
-                        <div style="display:flex; align-items:center; gap:8px; min-width:0;">
-                            <span style="width:18px; color:var(--texto-secundario); font-size:10px; font-weight:900;">#${idx + 1}</span>
-                            <img src="brawlers/${formatImg(b)}.png" style="width:30px; height:30px; object-fit:cover; border-radius:5px; flex-shrink:0;" onerror="this.onerror=null; this.style.display='none';">
-                            <span style="font-size:12px; font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${b}</span>
-                        </div>
-                        <div style="display:flex; flex-direction:column; align-items:flex-end; flex-shrink:0;">
-                            <span style="font-size:11px; color:#fff; font-weight:900;">${stats.picks} PICKS</span>
-                            <span style="font-size:10px; color:var(--winrate-color); font-weight:900;">${wr}% WR</span>
-                        </div>
-                    </div>`;
-                }).join('')}
-            </div>`
-            : `<div style="min-height:130px; display:flex; align-items:center; justify-content:center; text-align:center; color:var(--texto-secundario); font-size:12px; font-weight:bold; padding:15px;">Sem partidas deste time neste mapa no filtro atual.</div>`;
-
-        return `<div style="background:var(--bg-paineis); padding:14px; border-radius:9px; border:1px solid var(--borda-suave);">
-            <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
-                <img src="element/maps/${formatImg(mapa)}.png" style="width:50px; height:50px; object-fit:contain; border-radius:6px; flex-shrink:0;" onerror="this.onerror=null; this.style.display='none';">
-                <div style="min-width:0;">
-                    <div style="font-size:14px; font-weight:900; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${mapa}">${mapa}</div>
-                    <div style="font-size:10px; color:var(--texto-secundario); font-weight:bold; margin-top:3px;">${modoAtivoBest.toUpperCase()} · ${partidasMapa.length} PICKS</div>
-                </div>
-            </div>
-            ${conteudo}
-        </div>`;
-    }).join('');
-
-    const botoesModosBest = BEST_PICKS_MODOS.map(modo => `
-        <button type="button" onclick="selecionarModoBestPicks('${modo.nome.replace(/'/g, "\\'")}')"
-            style="display:flex; align-items:center; gap:7px; padding:8px 11px; border-radius:7px; border:1px solid ${modo.nome === modoAtivoBest ? 'var(--accent-purple)' : 'var(--borda-suave)'}; background:${modo.nome === modoAtivoBest ? 'rgba(176,0,255,.12)' : 'var(--bg-paineis)'}; color:#fff; cursor:pointer; font-weight:900; font-size:11px;">
-            <img src="element/modes/${formatImg(modo.nome)}.png" alt="${modo.nome}" title="${modo.nome}" style="width:20px; height:20px; object-fit:contain; flex-shrink:0;" onerror="this.onerror=null; this.src='element/modes/default.png';">
-            <span>${modo.nome}</span>
-        </button>`).join('');
-
-    const htmlPrincipaisPicksPorMapa = `
-        <div style="background:var(--bg-cards); padding:20px; border-radius:12px; border:1px solid var(--borda-destaque); margin-bottom:30px;">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:15px; margin-bottom:15px; flex-wrap:wrap;">
-                <div>
-                    <h3 style="color:var(--texto); margin:0; font-size:16px;">BEST PICKS</h3>
-                    <div style="font-size:10px; color:var(--texto-secundario); font-weight:bold; margin-top:4px;">3 MAPAS DA ROTAÇÃO · ${String(rotacaoBest.mes).padStart(2, '0')}/${rotacaoBest.ano}</div>
-                </div>
-                <span style="font-size:11px; color:var(--texto-secundario); font-weight:bold;">TOP 5 BRAWLERS POR MAPA</span>
-            </div>
-            <div style="display:flex; flex-wrap:wrap; gap:7px; margin-bottom:15px;">${botoesModosBest}</div>
-            <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px;">
-                ${cardsBestPicks || '<div style="grid-column:1/-1; text-align:center; color:var(--texto-secundario); padding:20px; font-weight:bold;">Não há 3 mapas configurados para este modo nesta rotação.</div>'}
-            </div>
-        </div>
-    `;
-
     let html = `
         <div style="display:flex; align-items:center; gap:20px; margin-bottom:30px; border-bottom:1px solid var(--borda-destaque); padding-bottom:20px;">
             <img src="${logoUrl}" style="width:80px; height:80px; object-fit:contain; background:var(--bg-cards); border-radius:12px; border:2px solid var(--borda-destaque);" onerror="${teamLogoOnError(time.id_time)}">
@@ -1184,8 +1067,7 @@ function renderizarDetalhesTime(time) {
                 <p style="font-size:11px; color:var(--texto-secundario); font-weight:bold; margin-top:5px;">PARTIDAS COLETADAS: <span style="color:#fff">${partidasDoTime.length}</span> | ÚLTIMA ATUALIZAÇÃO: <span style="color:#fff">${dataFormatadaUltimo}</span></p>
             </div>
         </div>
-        <div style="background:var(--bg-cards); padding:20px; border-radius:12px; border:1px solid var(--borda-destaque); margin-bottom:30px;"><h3 style="color:var(--texto); margin-bottom:15px; font-size:16px;">TOP 10 BRAWLERS DA EQUIPE</h3><div style="display:flex; flex-wrap:wrap; gap:10px;">${top10Time.length > 0 ? top10Time.map(([b, qtd]) => `<div style="background:var(--bg-paineis); padding:8px 12px; border-radius:6px; border:1px solid var(--borda-suave); display:flex; align-items:center; gap:10px;"><img src="brawlers/${formatImg(b)}.png" style="width:24px; border-radius:4px;" onerror="this.onerror=null; this.style.display='none';"><span style="font-weight:bold; font-size:13px;">${b}</span><span style="color:var(--texto-secundario); font-size:12px; font-weight:bold;">(${qtd})</span></div>`).join('') : '<span style="color:var(--texto-secundario); font-size:13px;">Sem dados suficientes no filtro.</span>'}</div></div>
-        ${htmlPrincipaisPicksPorMapa}
+        <div style="background:var(--bg-cards); padding:20px; border-radius:12px; border:1px solid var(--borda-destaque); margin-bottom:30px;"><h3 style="color:var(--texto); margin-bottom:15px; font-size:16px;">TOP 10 BRAWLERS DA EQUIPE</h3><div style="display:flex; flex-wrap:wrap; gap:10px;">${top10Time.length > 0 ? top10Time.map(([b, qtd]) => `<div style="background:var(--bg-paineis); padding:8px 12px; border-radius:6px; border:1px solid var(--borda-suave); display:flex; align-items:center; gap:10px;"><img src="brawlers/${formatImg(b)}.png" style="width:24px; border-radius:4px;" onerror="fallbackImagem(this,'brawlers/default.png')"><span style="font-weight:bold; font-size:13px;">${b}</span><span style="color:var(--texto-secundario); font-size:12px; font-weight:bold;">(${qtd})</span></div>`).join('') : '<span style="color:var(--texto-secundario); font-size:13px;">Sem dados suficientes no filtro.</span>'}</div></div>
         <h3 style="color:var(--texto); margin-bottom:15px; font-size:16px;">JOGADORES (ROSTER OFICIAL)</h3><div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:20px;">
     `;
 
@@ -1194,7 +1076,7 @@ function renderizarDetalhesTime(time) {
         let pJ = partidasDoTime.filter(r => r.player_tag === jogador.tag), pT = pJ.length, bJ = {};
         pJ.forEach(r => { let b = (r.pick||'').toUpperCase(); if(b) bJ[b] = (bJ[b] || 0) + 1; });
         let top5 = Object.entries(bJ).sort((a,b) => b[1] - a[1]).slice(0,5);
-        html += `<div style="background:var(--bg-cards); padding:20px; border-radius:12px; border:1px solid var(--borda-destaque);"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;"><h4 style="color:var(--accent-purple); font-size:18px;">${jogador.nick}</h4><span style="font-size:10px; background:#000; padding:3px 6px; border-radius:4px; color:var(--texto-secundario);">${jogador.tag}</span></div><p style="color:var(--texto-secundario); font-size:12px; margin-bottom:20px; font-weight:bold;">Total de Picks: ${pT}</p><div style="display:flex; flex-direction:column; gap:8px;">${top5.length > 0 ? top5.map(([b, qtd], idx) => `<div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-paineis); padding:8px 12px; border-radius:6px; border:1px solid var(--borda-suave);"><div style="display:flex; align-items:center; gap:10px;"><span style="font-weight:900; color:var(--texto-secundario); font-size:11px;">#${idx+1}</span><img src="brawlers/${formatImg(b)}.png" style="width:24px; border-radius:4px;" onerror="this.src='brawlers/default.png'"><span style="font-size:13px; font-weight:bold;">${b}</span></div><span style="font-size:12px; color:var(--texto-secundario); font-weight:bold;">${qtd}</span></div>`).join('') : '<span style="color:var(--texto-secundario); font-size:12px;">Sem picks no filtro.</span>'}</div></div>`;
+        html += `<div style="background:var(--bg-cards); padding:20px; border-radius:12px; border:1px solid var(--borda-destaque);"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;"><h4 style="color:var(--accent-purple); font-size:18px;">${jogador.nick}</h4><span style="font-size:10px; background:#000; padding:3px 6px; border-radius:4px; color:var(--texto-secundario);">${jogador.tag}</span></div><p style="color:var(--texto-secundario); font-size:12px; margin-bottom:20px; font-weight:bold;">Total de Picks: ${pT}</p><div style="display:flex; flex-direction:column; gap:8px;">${top5.length > 0 ? top5.map(([b, qtd], idx) => `<div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-paineis); padding:8px 12px; border-radius:6px; border:1px solid var(--borda-suave);"><div style="display:flex; align-items:center; gap:10px;"><span style="font-weight:900; color:var(--texto-secundario); font-size:11px;">#${idx+1}</span><img src="brawlers/${formatImg(b)}.png" style="width:24px; border-radius:4px;" onerror="fallbackImagem(this,'brawlers/default.png')"><span style="font-size:13px; font-weight:bold;">${b}</span></div><span style="font-size:12px; color:var(--texto-secundario); font-weight:bold;">${qtd}</span></div>`).join('') : '<span style="color:var(--texto-secundario); font-size:12px;">Sem picks no filtro.</span>'}</div></div>`;
     });
     if(painel) painel.innerHTML = html + `</div>`;
 }
@@ -1320,162 +1202,423 @@ function renderizarListaScrims(scrimsOriginais) {
 
 function renderizarDetalheScrim(scrim) {
     const lista = document.getElementById('scrims-lista'), detalhe = document.getElementById('scrims-detalhe');
-    lista.style.display = 'none';
-    detalhe.style.display = 'block';
+    lista.style.display = 'none'; detalhe.style.display = 'block';
 
-    const playersA = [...new Set(scrim.sets.flatMap(r => (r.t0Full || []).map(p => p.player_name)))].slice(0, 3);
-    const playersB = [...new Set(scrim.sets.flatMap(r => (r.t1Full || []).map(p => p.player_name)))].slice(0, 3);
-    const aGanhou = scrim.scoreA > scrim.scoreB, bGanhou = scrim.scoreB > scrim.scoreA;
-    const corA = aGanhou ? 'var(--winrate-color, #2ecc71)' : '#fff';
-    const corB = bGanhou ? 'var(--winrate-color, #2ecc71)' : '#fff';
+    let playersA = [...new Set(scrim.sets.flatMap(r => r.t0Full.map(p => p.player_name)))].slice(0,3);
+    let playersB = [...new Set(scrim.sets.flatMap(r => r.t1Full.map(p => p.player_name)))].slice(0,3);
+
+    let aGanhou = scrim.scoreA > scrim.scoreB, bGanhou = scrim.scoreB > scrim.scoreA;
+    let corA = aGanhou ? 'var(--winrate-color, #2ecc71)' : '#fff';
+    let corB = bGanhou ? 'var(--winrate-color, #2ecc71)' : '#fff';
 
     detalhe.innerHTML = `
-        <button class="scrim-back-btn" onclick="document.getElementById('scrims-lista').style.display='grid'; document.getElementById('scrims-detalhe').style.display='none';">← VOLTAR</button>
+        <button onclick="document.getElementById('scrims-lista').style.display='grid'; document.getElementById('scrims-detalhe').style.display='none';" style="background:transparent; border:2px solid var(--accent-purple); color:var(--accent-purple); padding:8px 20px; font-weight:bold; border-radius:6px; cursor:pointer; margin-bottom:30px;">← VOLTAR</button>
         <div class="scrim-detail-header">
-            <div class="scrim-matchup-header">
-                <div class="scrim-header-team">
-                    <img src="${teamLogoUrl(scrim.tAId)}" onerror="${teamLogoOnError(scrim.tAId)}">
-                    <div class="scrim-header-players">${playersA.map(p => `<span>${p}</span>`).join('')}</div>
+            <div style="display:flex; justify-content:center; align-items:flex-start; gap:40px;">
+                <div style="text-align:center;">
+                    <!-- Logos maiores e sem moldura no fundo -->
+                    <img src="${teamLogoUrl(scrim.tAId)}" style="height:120px; object-fit:contain; background:transparent; border:none;" onerror="${teamLogoOnError(scrim.tAId)}">
+                    <div style="font-size:11px; color:var(--texto-secundario); display:flex; gap:8px; justify-content:center; margin-top:8px; font-weight:bold;">${playersA.map(p => `<span>${p}</span>`).join('')}</div>
                 </div>
-                <div class="scrim-header-score">
-                    <span style="color:${corA};">${scrim.scoreA}</span>
-                    <span class="score-separator">-</span>
-                    <span style="color:${corB};">${scrim.scoreB}</span>
+                <div style="font-size:42px; font-weight:900; line-height:120px;">
+                    <span style="color:${corA};">${scrim.scoreA}</span> <span style="color:var(--accent-purple)">-</span> <span style="color:${corB};">${scrim.scoreB}</span>
                 </div>
-                <div class="scrim-header-team">
-                    <img src="${teamLogoUrl(scrim.tBId)}" onerror="${teamLogoOnError(scrim.tBId)}">
-                    <div class="scrim-header-players">${playersB.map(p => `<span>${p}</span>`).join('')}</div>
+                <div style="text-align:center;">
+                    <!-- Logos maiores e sem moldura no fundo -->
+                    <img src="${teamLogoUrl(scrim.tBId)}" style="height:120px; object-fit:contain; background:transparent; border:none;" onerror="${teamLogoOnError(scrim.tBId)}">
+                    <div style="font-size:11px; color:var(--texto-secundario); display:flex; gap:8px; justify-content:center; margin-top:8px; font-weight:bold;">${playersB.map(p => `<span>${p}</span>`).join('')}</div>
                 </div>
             </div>
         </div>
-
-        <div class="scrim-sets-layout">
-            <aside class="scrim-sets-sidebar">
-                <div class="scrim-sets-title">PARTIDAS JOGADAS <span>${scrim.roundsMD3.length}</span></div>
-                <div class="scrim-sets-list" id="scrim-sets-list">
-                    ${scrim.roundsMD3.map((partida, i) => {
-                        const venceuA = partida.vencedor === scrim.tAId;
-                        const venceuB = partida.vencedor === scrim.tBId;
-                        const vencedorId = venceuA ? scrim.tAId : venceuB ? scrim.tBId : null;
-                        const vencedorNome = venceuA ? scrim.tANome : venceuB ? scrim.tBNome : '—';
-                        const corVencedor = venceuA ? 'var(--winrate-color, #2ecc71)' : venceuB ? 'var(--loss-color, #e74c3c)' : 'var(--texto-secundario)';
-                        const placar = `${partida.scoreA} - ${partida.scoreB}`;
-                        const logo = vencedorId ? `<img src="${teamLogoUrl(vencedorId)}" class="scrim-match-winner-logo" onerror="${teamLogoOnError(vencedorId)}" alt="${vencedorNome}">` : '';
-                        return `<button class="scrim-set-btn scrim-match-btn ${i === 0 ? 'active' : ''}" onclick="window.selecionarPartidaScrim(${i}, this)">
-                            <div class="scrim-match-top"><strong>PARTIDA ${i + 1}</strong></div>
-                            <div class="scrim-match-result">
-                                ${logo}
-                                <div class="scrim-match-result-info">
-                                    <span class="scrim-match-winner" style="color:${corVencedor};">${vencedorNome}</span>
-                                    <span class="scrim-match-score">${placar}</span>
-                                </div>
-                            </div>
-                            <div class="scrim-set-map">${partida.mapa || 'Mapa não informado'}</div>
-                        </button>`;
-                    }).join('')}
+        
+        <div class="scrim-rounds-container" id="rounds-scroll" style="display:flex; flex-wrap:wrap; gap:10px; overflow:visible; max-height:none; width:100%; margin-top: 20px;">
+        ${scrim.roundsMD3.map((r, i) => {
+            let venceuA = r.vencedor === r.tAId;
+            let corRound = venceuA ? 'var(--winrate-color, #2ecc71)' : 'var(--loss-color, #e74c3c)';
+            let nomeVencedorRound = venceuA ? r.tANome : r.tBNome;
+            return `<div class="scrim-round-btn ${i === 0 ? 'active' : ''}" onclick="window.selecionarRoundMD3(${i}, this)" style="flex:0 0 auto; padding: 10px;">
+                <div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 5px;">
+                    <!-- Número do round maior -->
+                    <span style="font-size:15px; font-weight:900; color:var(--accent-purple);">ROUND ${i+1}</span>
+                    <!-- Placar de Sets ao lado e menor -->
+                    <span style="font-size:11px; font-weight:bold; color:var(--texto-secundario);">(Sets: ${r.scoreA}-${r.scoreB})</span>
                 </div>
-            </aside>
-            <section class="scrim-set-content" id="round-view-container"></section>
+                <img src="element/modes/${formatImg(r.modo)}.png" onerror="fallbackImagem(this,'element/modes/default.png')">
+                <span style="display:block; margin-top:4px; font-size:11px; font-weight:900; color:${corRound}; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${nomeVencedorRound}">${nomeVencedorRound}</span>
+            </div>`;
+        }).join('')}
         </div>
+        <div id="round-view-container" style="margin-top: 25px;"></div>
     `;
-
-    window.scrimAtual = scrim;
-    window.selecionarPartidaScrim(0, detalhe.querySelector('.scrim-set-btn'));
+    window.scrimAtual = scrim; 
+    window.selecionarRoundMD3(0, detalhe.querySelector('.scrim-round-btn'));
 }
 
-window.selecionarPartidaScrim = function(index, btnElement) {
-    if (!window.scrimAtual || !window.scrimAtual.roundsMD3 || !window.scrimAtual.roundsMD3[index]) return;
-
-    document.querySelectorAll('.scrim-set-btn').forEach(b => b.classList.remove('active'));
-    if (btnElement) btnElement.classList.add('active');
-
-    const partida = window.scrimAtual.roundsMD3[index];
-    // Cada PARTIDA (MD3) é composta por 2 ou 3 sets. A visualização principal
-    // usa o primeiro set da partida, enquanto a lateral mostra o placar completo.
-    const set = partida.firstSet || partida.sets[0];
-    if (!set) return;
-
-    window.renderizarSetScrim(set, index, partida);
-};
-
-window.renderizarSetScrim = function(set, index, partida) {
-    if (!window.scrimAtual || !set) return;
-
-    const container = document.getElementById('round-view-container');
-    if (!container) return;
-
-    const venceuA = set.vencedor === window.scrimAtual.tAId;
-    const venceuB = set.vencedor === window.scrimAtual.tBId;
-    const corSetA = venceuA ? 'var(--winrate-color, #2ecc71)' : '#fff';
-    const corSetB = venceuB ? 'var(--winrate-color, #2ecc71)' : '#fff';
-    const playersA = (set.t0Full || []).slice(0, 3).map(p => p.player_name);
-    const playersB = (set.t1Full || []).slice(0, 3).map(p => p.player_name);
-    const picksA = set.picksA || [];
-    const picksB = set.picksB || [];
-    const bansDoSet = dadosBans.filter(r => r.id_partida === set.id);
-    const bansTimeA = bansDoSet.filter(r => r.id_time === window.scrimAtual.tAId);
-    const bansTimeB = bansDoSet.filter(r => r.id_time === window.scrimAtual.tBId);
-    const slugMapa = formatImg(set.mapa || '');
-    const slugModo = formatImg(set.modo || '');
-
-    const renderPick = (p, index, teamWon) => `<div class="scrim-pick-item" style="color:${teamWon ? 'var(--winrate-color, #2ecc71)' : '#fff'};">
-        <span class="scrim-pick-badge">PICK ${index + 1}</span>
-        <img src="brawlers/${formatImg(p || '')}.png" onerror="this.src='brawlers/default.png'">
-        <span>${p || '—'}</span>
-    </div>`;
-
-    const renderBans = (bans) => bans.length ? `<div class="scrim-bans-row">${bans.map(b => `<img src="brawlers/${formatImg(b.brawler_banido || b.brawler_name || b.brawler || b.pick || '')}.png" title="BAN" onerror="this.style.display='none'">`).join('')}</div>` : '';
-
-    container.innerHTML = `
-        <div class="round-details-view">
-            <div class="scrim-set-content-head">
-                <div>
-                    <div class="scrim-set-kicker">PARTIDA ${index + 1} · ${set.modo || 'MODO NÃO INFORMADO'} · ${partida ? `${partida.scoreA} - ${partida.scoreB}` : ''}</div>
-                    <h2>${(set.mapa || 'MAPA NÃO INFORMADO').toUpperCase()}</h2>
-                </div>
-                <div class="scrim-set-result">
-                    <span style="color:${corSetA};">${venceuA ? 'VITÓRIA' : venceuB ? 'DERROTA' : '—'}</span>
-                    <span>${window.scrimAtual.tANome} × ${window.scrimAtual.tBNome}</span>
-                </div>
-            </div>
-
-            <div class="scrim-set-bans">
-                <div><strong>${window.scrimAtual.tANome}</strong>${renderBans(bansTimeA)}</div>
-                <div><strong>${window.scrimAtual.tBNome}</strong>${renderBans(bansTimeB)}</div>
-            </div>
-
-            <div class="scrim-picks-container">
-                <div class="team-picks-scrim scrim-team-picks-left">
-                    ${playersA.map((p, i) => renderPick(picksA[i], i, venceuA)).join('')}
-                </div>
-
-                <div class="map-middle-scrim">
-                    <img src="element/maps/${slugMapa}.png" onerror="this.src='element/maps/default.png'">
-                    <div class="scrim-mode-line">
-                        <img src="element/modes/${slugModo}.png" onerror="this.style.display='none'">
-                        <span>${set.modo || 'MODO'}</span>
-                    </div>
-                    <strong>${set.mapa || 'MAPA'}</strong>
-                </div>
-
-                <div class="team-picks-scrim scrim-team-picks-right">
-                    ${playersB.map((p, i) => renderPick(picksB[i], i, venceuB)).join('')}
-                </div>
-            </div>
-        </div>
-    `;
-};
-
-
-window.selecionarSetScrim = function(index, btnElement) {
-    if (!window.scrimAtual || !window.scrimAtual.sets[index]) return;
-    window.renderizarSetScrim(window.scrimAtual.sets[index], index, { scoreA: 0, scoreB: 0 });
-};
-
-// Compatibilidade com chamadas antigas que possam existir em cache/integrações.
 window.selecionarRoundMD3 = function(index, btnElement) {
-    window.selecionarSetScrim(index, btnElement);
+    document.querySelectorAll('.scrim-round-btn').forEach(b => b.classList.remove('active'));
+    if(btnElement) btnElement.classList.add('active');
+
+    let roundMD3 = window.scrimAtual.roundsMD3[index];
+    let firstSet = roundMD3.firstSet; 
+    const container = document.getElementById('round-view-container');
+
+    let venceuA = roundMD3.vencedor === window.scrimAtual.tAId;
+    let corSetA = venceuA ? 'var(--winrate-color, #2ecc71)' : '#fff';
+    let corSetB = !venceuA ? 'var(--winrate-color, #2ecc71)' : '#fff';
+
+    let playersA = firstSet.t0Full.map(p => p.player_name), playersB = firstSet.t1Full.map(p => p.player_name);
+    let bansDoRound = dadosBans.filter(r => r.id_partida === firstSet.id);
+    let bansTimeA   = bansDoRound.filter(r => r.id_time === window.scrimAtual.tAId), bansTimeB   = bansDoRound.filter(r => r.id_time === window.scrimAtual.tBId);
+    let temBans     = bansTimeA.length > 0 || bansTimeB.length > 0;
+
+container.innerHTML = `
+    <div class="round-details-view" style="background: var(--bg-cards); padding: 25px; border-radius: 12px; border: 1px solid var(--borda-destaque);">
+        
+        <div class="picks-container" style="display:flex; justify-content:center; align-items:center; gap: 40px; margin-top: 15px;">
+            
+            <div style="display:flex; flex-direction:column; gap:15px; color:${corSetA};">
+                ${playersA.map((p, index) => {
+                    let pickBrawler = firstSet.picksA ? firstSet.picksA[index] : '';
+                    return `<div style="display:flex; flex-direction:column; align-items:center; gap:5px; position:relative;">
+                        <span style="position:absolute; top:-8px; left:-8px; background:var(--accent-purple); color:#fff; font-size:10px; font-weight:900; padding:2px 6px; border-radius:10px; z-index:1;">PICK ${index+1}</span>
+                        <img src="brawlers/${formatImg(pickBrawler)}.png" style="width: 75px; height: 75px; border-radius: 8px; object-fit: cover; border: 2px solid ${venceuA ? 'var(--winrate-color, #2ecc71)' : 'var(--borda-suave, #555)'};" onerror="fallbackImagem(this,'brawlers/default.png')">
+                        <span style="font-size:12px; font-weight:900;">${p}</span>
+                    </div>`;
+                }).join('')}
+            </div>
+            
+            <div style="text-align:center;">
+                <img src="element/maps/${formatImg(roundMD3.mapa)}.png" style="width: 250px; border-radius: 10px; object-fit: cover; border: 2px solid var(--borda-destaque);" onerror="fallbackImagem(this,'element/maps/default.png')">
+                <p style="margin-top:10px; font-size:14px; color:var(--texto-secundario); font-weight:bold;">
+                    ${roundMD3.mapa.toUpperCase()}
+                </p>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:15px; color:${corSetB};">
+                ${playersB.map((p, index) => {
+                    let pickBrawler = firstSet.picksB ? firstSet.picksB[index] : '';
+                    return `<div style="display:flex; flex-direction:column; align-items:center; gap:5px; position:relative;">
+                        <span style="position:absolute; top:-8px; left:-8px; background:var(--accent-purple); color:#fff; font-size:10px; font-weight:900; padding:2px 6px; border-radius:10px; z-index:1;">PICK ${index+1}</span>
+                        <img src="brawlers/${formatImg(pickBrawler)}.png" style="width: 75px; height: 75px; border-radius: 8px; object-fit: cover; border: 2px solid ${!venceuA ? 'var(--winrate-color, #2ecc71)' : 'var(--borda-suave, #555)'};" onerror="fallbackImagem(this,'brawlers/default.png')">
+                        <span style="font-size:12px; font-weight:900;">${p}</span>
+                    </div>`;
+                }).join('')}
+            </div>
+
+        </div>
+    </div>
+`;
 };
+
+
+
+// ========================================================
+// RESPONSIVIDADE DA TELA SCRIMS
+// Mantém a mesma composição visual do PC e adapta apenas
+// larguras/tamanhos para tablet e celular.
+// ========================================================
+(function aplicarResponsividadeScrims() {
+    if (document.getElementById('scrims-responsive-style')) return;
+
+    const style = document.createElement('style');
+    style.id = 'scrims-responsive-style';
+    style.textContent = `
+        /* Base: a barra de partidas fica lateral ao conteúdo, como no PC */
+        #scrims-detalhe {
+            width: 100%;
+            min-width: 0;
+            display: grid;
+            grid-template-columns: 150px minmax(0, 1fr);
+            gap: 14px;
+            align-items: start;
+        }
+
+        #scrims-detalhe > button,
+        #scrims-detalhe > .scrim-detail-header {
+            grid-column: 1 / -1;
+            min-width: 0;
+        }
+
+        #scrims-detalhe > .scrim-rounds-container {
+            grid-column: 1;
+            grid-row: 3;
+            width: 100% !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            flex-wrap: nowrap !important;
+            gap: 10px !important;
+            margin-top: 0 !important;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+            max-height: 430px !important;
+            padding-right: 2px;
+        }
+
+        #scrims-detalhe > #round-view-container {
+            grid-column: 2;
+            grid-row: 3;
+            min-width: 0;
+            width: 100%;
+            margin-top: 0 !important;
+        }
+
+        .scrim-round-btn {
+            width: 100% !important;
+            min-width: 0 !important;
+            flex: 0 0 auto !important;
+            padding: 10px !important;
+            overflow: hidden;
+        }
+
+        .scrim-round-btn img {
+            width: 30px !important;
+            height: 30px !important;
+            object-fit: contain !important;
+            display: block;
+            margin: 2px auto 0;
+        }
+
+        .scrim-round-btn > div {
+            min-width: 0;
+            flex-wrap: wrap;
+        }
+
+        .scrim-round-btn span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .scrim-detail-header > div:first-child {
+            width: 100%;
+            min-width: 0;
+            justify-content: center !important;
+            gap: clamp(18px, 4vw, 40px) !important;
+        }
+
+        .scrim-detail-header img {
+            max-width: min(145px, 18vw);
+        }
+
+        .round-details-view {
+            width: 100%;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .picks-container {
+            width: 100% !important;
+            min-width: 0;
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) minmax(90px, 34%) minmax(0, 1fr) !important;
+            align-items: center !important;
+            justify-items: center !important;
+            gap: clamp(8px, 2vw, 40px) !important;
+            margin-top: 8px !important;
+        }
+
+        .picks-container > div {
+            min-width: 0;
+            max-width: 100%;
+        }
+
+        .picks-container > div:first-child,
+        .picks-container > div:last-child {
+            width: 100%;
+            align-items: center !important;
+            gap: clamp(7px, 1.5vw, 15px) !important;
+        }
+
+        .picks-container > div:first-child > div,
+        .picks-container > div:last-child > div {
+            max-width: 100%;
+        }
+
+        .picks-container > div:first-child img,
+        .picks-container > div:last-child img {
+            width: clamp(42px, 6vw, 75px) !important;
+            height: clamp(42px, 6vw, 75px) !important;
+        }
+
+        .picks-container > div:first-child span:last-child,
+        .picks-container > div:last-child span:last-child {
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: clamp(8px, 1.2vw, 12px) !important;
+        }
+
+        .picks-container > div:first-child > div > span:first-child,
+        .picks-container > div:last-child > div > span:first-child {
+            font-size: clamp(7px, 1vw, 10px) !important;
+            padding: 2px 4px !important;
+            top: -5px !important;
+            left: -4px !important;
+        }
+
+        .picks-container > div:nth-child(2) {
+            width: 100%;
+            max-width: 250px;
+        }
+
+        .picks-container > div:nth-child(2) img {
+            width: clamp(90px, 22vw, 250px) !important;
+            max-width: 100% !important;
+            height: auto !important;
+            max-height: 330px;
+            object-fit: contain !important;
+        }
+
+        .picks-container > div:nth-child(2) p {
+            font-size: clamp(8px, 1.3vw, 14px) !important;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Evita que listas/cards do modo Scrims criem largura maior que a tela. */
+        #scrims-lista,
+        #scrims-detalhe,
+        #round-view-container,
+        .round-details-view,
+        .scrim-card {
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 900px) {
+            #scrims-detalhe {
+                grid-template-columns: clamp(100px, 23vw, 130px) minmax(0, 1fr);
+                gap: 10px;
+            }
+
+            #scrims-detalhe > .scrim-rounds-container {
+                max-height: 420px !important;
+            }
+
+            .scrim-detail-header img {
+                height: clamp(60px, 11vw, 100px) !important;
+                width: clamp(70px, 14vw, 125px) !important;
+            }
+        }
+
+        @media (max-width: 600px) {
+            #scrims-detalhe {
+                grid-template-columns: clamp(82px, 24vw, 105px) minmax(0, 1fr);
+                gap: 7px;
+            }
+
+            #scrims-detalhe > button {
+                justify-self: start;
+                margin-bottom: 10px !important;
+                padding: 6px 12px !important;
+                font-size: 10px !important;
+            }
+
+            .scrim-detail-header > div:first-child {
+                gap: clamp(8px, 3vw, 18px) !important;
+            }
+
+            .scrim-detail-header img {
+                height: clamp(48px, 13vw, 72px) !important;
+                width: clamp(58px, 16vw, 90px) !important;
+            }
+
+            .scrim-detail-header div[style*="font-size:42px"] {
+                font-size: clamp(24px, 7vw, 38px) !important;
+                line-height: 1 !important;
+            }
+
+            .scrim-round-btn {
+                padding: 7px 5px !important;
+                border-radius: 7px !important;
+            }
+
+            .scrim-round-btn img {
+                width: 24px !important;
+                height: 24px !important;
+            }
+
+            .scrim-round-btn > div span:first-child {
+                font-size: 10px !important;
+            }
+
+            .scrim-round-btn > div span:last-child {
+                font-size: 8px !important;
+            }
+
+            .scrim-round-btn > span {
+                font-size: 8px !important;
+                max-width: 100% !important;
+            }
+
+            .round-details-view {
+                padding: clamp(8px, 2.5vw, 16px) !important;
+                border-radius: 9px !important;
+            }
+
+            .picks-container {
+                grid-template-columns: minmax(0, 1fr) minmax(72px, 31%) minmax(0, 1fr) !important;
+                gap: 4px !important;
+            }
+
+            .picks-container > div:first-child img,
+            .picks-container > div:last-child img {
+                width: clamp(32px, 10vw, 52px) !important;
+                height: clamp(32px, 10vw, 52px) !important;
+            }
+
+            .picks-container > div:first-child,
+            .picks-container > div:last-child {
+                gap: 5px !important;
+            }
+
+            .picks-container > div:nth-child(2) img {
+                width: clamp(68px, 23vw, 145px) !important;
+                max-height: 250px;
+            }
+
+            .picks-container > div:nth-child(2) p {
+                margin-top: 5px !important;
+                font-size: 8px !important;
+            }
+        }
+
+        @media (max-width: 380px) {
+            #scrims-detalhe {
+                grid-template-columns: 76px minmax(0, 1fr);
+                gap: 5px;
+            }
+
+            #scrims-detalhe > .scrim-rounds-container {
+                max-height: 360px !important;
+            }
+
+            .scrim-round-btn > div {
+                display: block !important;
+            }
+
+            .scrim-round-btn > div span {
+                display: block;
+                text-align: center;
+                width: 100%;
+            }
+
+            .picks-container > div:nth-child(2) img {
+                width: 70px !important;
+            }
+
+            .picks-container > div:first-child img,
+            .picks-container > div:last-child img {
+                width: 29px !important;
+                height: 29px !important;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+})();
 
 // ==========================================
 // 9. FUNÇÃO PARA ORDENAR TABELAS (META)
@@ -1548,7 +1691,7 @@ function renderizarSidebarMapas() {
         html += `
             <div style="margin-bottom: 15px;">
                 <div style="display: flex; align-items: center; gap: 10px; font-weight: bold; font-size: 14px; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 4px;">
-                    <img src="element/modes/${cleanMode}.png" style="width: 20px;" onerror="this.src='element/modes/default.png'">
+                    <img src="element/modes/${cleanMode}.png" style="width: 20px;" onerror="fallbackImagem(this,'element/modes/default.png')">
                     ${modo.toUpperCase()}
                 </div>
                 <div style="padding-left: 10px; margin-top: 5px;">
@@ -1558,7 +1701,7 @@ function renderizarSidebarMapas() {
             let cleanMap = formatImg(mapa);
             html += `
                 <div class="sidebar-item" onclick="selecionarMapa('${modo}', '${mapa}')" style="display: flex; align-items: center; gap: 8px; padding: 6px; cursor: pointer; font-size: 13px;">
-                    <img src="element/maps/${cleanMap}.png" style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px;" onerror="this.src='element/maps/default.png'">
+                    <img src="element/maps/${cleanMap}.png" style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px;" onerror="fallbackImagem(this,'element/maps/default.png')">
                     <span>${mapa}</span>
                 </div>
             `;
@@ -1671,10 +1814,10 @@ function renderizarDetalhesMapa(modo, mapa) {
     let html = `
         <!-- Cabeçalho do Mapa (Foto Média + Título) -->
         <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 25px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
-            <img src="element/maps/${cleanMap}.png" style="width: 250px; height: 140px; object-fit: cover; border-radius: 8px; border: 2px solid var(--borda-destaque);" onerror="this.src='element/maps/default.png'">
+            <img src="element/maps/${cleanMap}.png" style="width: 250px; height: 140px; object-fit: cover; border-radius: 8px; border: 2px solid var(--borda-destaque);" onerror="fallbackImagem(this,'element/maps/default.png')">
             <div>
                 <div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;">
-                    <img src="element/modes/${cleanMode}.png" style="width:24px;" onerror="this.src='element/modes/default.png'">
+                    <img src="element/modes/${cleanMode}.png" style="width:24px;" onerror="fallbackImagem(this,'element/modes/default.png')">
                     <span style="color:var(--texto-secundario); font-weight:bold;">${modo.toUpperCase()}</span>
                 </div>
                 <h2 style="font-size: 32px; margin: 0;">${mapa}</h2>
@@ -1693,9 +1836,9 @@ function renderizarDetalhesMapa(modo, mapa) {
                         ${arrComps.map(c => `
                             <tr>
                                 <td style="text-align:left; display:flex; gap:5px;">
-                                    <img src="brawlers/${formatImg(c.brawlers[0])}.png" style="width:24px; border-radius:4px;" onerror="this.src='brawlers/default.png'">
-                                    <img src="brawlers/${formatImg(c.brawlers[1])}.png" style="width:24px; border-radius:4px;" onerror="this.src='brawlers/default.png'">
-                                    <img src="brawlers/${formatImg(c.brawlers[2])}.png" style="width:24px; border-radius:4px;" onerror="this.src='brawlers/default.png'">
+                                    <img src="brawlers/${formatImg(c.brawlers[0])}.png" style="width:24px; border-radius:4px;" onerror="fallbackImagem(this,'brawlers/default.png')">
+                                    <img src="brawlers/${formatImg(c.brawlers[1])}.png" style="width:24px; border-radius:4px;" onerror="fallbackImagem(this,'brawlers/default.png')">
+                                    <img src="brawlers/${formatImg(c.brawlers[2])}.png" style="width:24px; border-radius:4px;" onerror="fallbackImagem(this,'brawlers/default.png')">
                                 </td>
                                 <td>${c.picks}</td><td style="color:gray;">${c.pr}%</td><td>${c.wins}</td><td class="winrate-cell">${c.wr}%</td>
                             </tr>
@@ -1713,9 +1856,9 @@ function renderizarDetalhesMapa(modo, mapa) {
                         ${arrSinergias.map(c => `
                             <tr>
                                 <td style="text-align:left; display:flex; gap:5px; align-items:center;">
-                                    <img src="brawlers/${formatImg(c.brawlers[0])}.png" style="width:24px; border-radius:4px;" onerror="this.src='brawlers/default.png'">
+                                    <img src="brawlers/${formatImg(c.brawlers[0])}.png" style="width:24px; border-radius:4px;" onerror="fallbackImagem(this,'brawlers/default.png')">
                                     <span style="font-size:12px; color:gray;">+</span>
-                                    <img src="brawlers/${formatImg(c.brawlers[1])}.png" style="width:24px; border-radius:4px;" onerror="this.src='brawlers/default.png'">
+                                    <img src="brawlers/${formatImg(c.brawlers[1])}.png" style="width:24px; border-radius:4px;" onerror="fallbackImagem(this,'brawlers/default.png')">
                                 </td>
                                 <td>${c.picks}</td><td style="color:gray;">${c.pr}%</td><td>${c.wins}</td><td class="winrate-cell">${c.wr}%</td>
                             </tr>
@@ -1734,7 +1877,7 @@ function renderizarDetalhesMapa(modo, mapa) {
                             ${arrBrawlers.map(b => `
                                 <tr>
                                     <td style="text-align:left; font-weight:bold;">
-                                        <img src="brawlers/${formatImg(b.nome)}.png" style="width:20px; vertical-align:middle; margin-right:5px; border-radius:4px;" onerror="this.src='brawlers/default.png'">
+                                        <img src="brawlers/${formatImg(b.nome)}.png" style="width:20px; vertical-align:middle; margin-right:5px; border-radius:4px;" onerror="fallbackImagem(this,'brawlers/default.png')">
                                         ${b.nome}
                                     </td>
                                     <td>${b.picks}</td><td style="color:gray;">${b.pr}%</td><td>${b.wins}</td><td class="winrate-cell">${b.wr}%</td>
@@ -1806,7 +1949,7 @@ function mostrarHistoricoTimeMapa(idTime, nomeTime) {
             <div style="background:var(--bg-geral); padding:10px; border-radius:8px; text-align:center; min-width:120px; border: 1px solid ${h.win ? 'rgba(0,255,0,0.2)' : 'rgba(255,0,0,0.2)'};">
                 <div style="font-size:10px; color:gray; margin-bottom:5px;">${h.win ? '<span style="color:#4caf50;">VITÓRIA</span>' : '<span style="color:#f44336;">DERROTA</span>'}</div>
                 <div style="display:flex; justify-content:center; gap:5px;">
-                    ${h.comp.map(b => `<img src="brawlers/${formatImg(b)}.png" style="width:28px; border-radius:4px;" onerror="this.src='brawlers/default.png'" title="${b}">`).join('')}
+                    ${h.comp.map(b => `<img src="brawlers/${formatImg(b)}.png" style="width:28px; border-radius:4px;" onerror="fallbackImagem(this,'brawlers/default.png')" title="${b}">`).join('')}
                 </div>
             </div>
         `).join('');
