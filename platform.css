@@ -1091,3 +1091,91 @@ html[data-platform="mobile"] body.draft-page .main-container {
     width: 100% !important;
     max-width: 100% !important;
 }
+
+/* =========================================================
+   AJUSTES FINAIS — ALL + SEÇÕES + DRAFT MOBILE
+   ========================================================= */
+
+/* A palavra SEÇÕES não é exibida; os links continuam visíveis. */
+.side-current-region .side-nav-section-title {
+    display: none !important;
+}
+
+/* Garante que a região selecionada use sua própria cor, sem o roxo padrão. */
+.side-regions-section .region-block-SA > .side-region-link.active {
+    background: linear-gradient(90deg, rgba(255,51,51,.24), rgba(255,51,51,.06)) !important;
+    border-left-color: #ff3333 !important;
+}
+.side-regions-section .region-block-NA > .side-region-link.active {
+    background: linear-gradient(90deg, rgba(34,197,94,.24), rgba(34,197,94,.06)) !important;
+    border-left-color: #22c55e !important;
+}
+.side-regions-section .region-block-EMEA > .side-region-link.active {
+    background: linear-gradient(90deg, rgba(59,130,246,.24), rgba(59,130,246,.06)) !important;
+    border-left-color: #3b82f6 !important;
+}
+.side-regions-section .region-block-EA > .side-region-link.active {
+    background: linear-gradient(90deg, rgba(255,79,216,.24), rgba(255,79,216,.06)) !important;
+    border-left-color: #ff4fd8 !important;
+}
+.side-regions-section .region-block-ALL > .side-region-link.active {
+    background: linear-gradient(90deg, rgba(250,204,21,.24), rgba(250,204,21,.06)) !important;
+    border-left-color: #facc15 !important;
+}
+
+/* =========================================================
+   DRAFT NO CELULAR
+   Esconde os painéis laterais para que BANS + PICKS + MAPA
+   tenham toda a largura da tela. O JS calcula a escala do board.
+   ========================================================= */
+@media (max-width: 700px) {
+    body.draft-page .main-container {
+        padding: 0 6px 6px !important;
+        gap: 0 !important;
+    }
+
+    body.draft-page .draft-area {
+        width: 100% !important;
+        max-width: none !important;
+        flex: 1 1 100% !important;
+        padding: 4px !important;
+        border-radius: 12px !important;
+    }
+
+    body.draft-page .info-panels,
+    body.draft-page .roster-area {
+        display: none !important;
+    }
+
+    body.draft-page .vertical-layout {
+        width: 100% !important;
+        height: 100% !important;
+        overflow: hidden !important;
+    }
+
+    body.draft-page .draft-board-capture {
+        transform: none !important;
+        max-width: none !important;
+        max-height: none !important;
+        margin: 0 auto !important;
+    }
+
+    body.draft-page .top-controls {
+        margin: 4px 6px 5px !important;
+        padding: 6px 8px !important;
+        min-height: 34px !important;
+    }
+
+    body.draft-page #timer-fase-label {
+        font-size: 9px !important;
+    }
+
+    body.draft-page #timer-numero {
+        font-size: 21px !important;
+    }
+
+    body.draft-page .timer-clock-icon {
+        width: 24px !important;
+        height: 24px !important;
+    }
+}

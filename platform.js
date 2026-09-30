@@ -200,14 +200,13 @@
             ["na.html", "NA", "NA", "element/na.png"],
             ["emea.html", "EMEA", "EMEA", "element/emea.png"],
             ["ea.html", "EA", "EA", "element/ea.png"],
-            ["geral.html", "GERAL", "ALL", null]
+            ["geral.html", "ALL", "ALL", "element/geral.png"]
         ];
 
         function appendRegionSections(parent, activeRegion) {
             if (!activeRegion) return;
             const section = document.createElement("div");
             section.className = "side-nav-section side-current-region region-context region-" + activeRegion;
-            section.appendChild(createSectionTitle("SEÇÕES"));
             [["meta", "META"], ["brawlers", "BRAWLERS"], ["mapas", "MAPAS"], ["times", "TIMES"], ["scrims", "SCRIMS"]]
                 .forEach(([value, label]) => {
                     const a = document.createElement("a");
@@ -331,7 +330,58 @@
         }
     }
 
+
+    function setupDraftResponsiveBoard() {
+        if (currentPage() !== "draft.html") return;
+
+        const fit = function () {
+            const board = document.getElementById("draft-board-capture");
+            const area = document.getElementById("draft-area");
+            if (!board || !area || board.offsetWidth === 0 || area.offsetWidth === 0) return;
+
+            const platform = document.documentElement.getAttribute("data-platform");
+            if (platform !== "mobile") {
+                board.style.zoom = "";
+                return;
+            }
+
+            // No celular, o tabuleiro inteiro precisa caber na área visível.
+            // Medimos o tamanho original e calculamos a escala necessária.
+            board.style.zoom = "1";
+            board.style.transform = "none";
+
+            const naturalWidth = board.offsetWidth;
+            const naturalHeight = board.offsetHeight;
+            if (!naturalWidth || !naturalHeight) return;
+
+            const availableWidth = Math.max(100, area.clientWidth - 12);
+            const availableHeight = Math.max(100, area.clientHeight - 8);
+            const scale = Math.min(
+                availableWidth / naturalWidth,
+                availableHeight / naturalHeight,
+                1
+            );
+
+            board.style.zoom = String(Math.max(0.34, scale));
+        };
+
+        window.addEventListener("resize", fit);
+        window.addEventListener("orientationchange", function () { setTimeout(fit, 120); });
+        window.addEventListener("bscinfosPlatformChanged", function () { setTimeout(fit, 80); });
+
+        // O Draft é montado dinamicamente depois do carregamento da página.
+        const observer = new MutationObserver(function () {
+            if (document.getElementById("draft-board-capture")) {
+                setTimeout(fit, 50);
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        setTimeout(fit, 150);
+        setTimeout(fit, 500);
+    }
+
     init();
+    setupDraftResponsiveBoard();
 
     window.BSCInfosPlatform = {
         get: function () { return document.documentElement.getAttribute("data-platform"); },
