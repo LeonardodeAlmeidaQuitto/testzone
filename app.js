@@ -46,7 +46,6 @@ const ROTACAO_MAPAS = {
             }
         }
     };
-
        
 // ========================================================
 // 2. ROSTER AUTOMÁTICO DO GERADOR.PY
@@ -1586,7 +1585,7 @@ container.innerHTML = `
             .picks-container > div:first-child span:last-child,
             .picks-container > div:last-child span:last-child { font-size: 8px !important; }
             .scrim-map-image-box { width: min(155px, 100%); }
-            .scrim-map-image { max-width: 155px !important; max-height: 255px !important; }
+            .scrim-map-image { max-width: 155px !important; max-height: 245px !important; }
             .scrim-map-overlay { top: 4px; left: 4px; gap: 3px; }
             .scrim-mode-icon { width: 21px !important; height: 21px !important; }
             .scrim-pick-order { width: 19px; height: 19px; font-size: 9px; border-width: 1px; }
@@ -1599,7 +1598,7 @@ container.innerHTML = `
             .scrim-round-btn > div { display: block !important; }
             .scrim-round-btn > div span { display: block; text-align: center; width: 100%; }
             .scrim-map-image-box { width: 125px; }
-            .scrim-map-image { max-width: 125px !important; max-height: 220px !important; }
+            .scrim-map-image { max-width: 125px !important; max-height: 212px !important; }
             .picks-container > div:first-child img,
             .picks-container > div:last-child img { width: 32px !important; height: 32px !important; }
         }
