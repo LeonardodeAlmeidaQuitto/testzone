@@ -45,7 +45,7 @@ const ROTACAO_MAPAS = {
             "Knockout": ["Goldarm Gulch", "Out in the Open", "Belle's Rock"]        
             }
         }
-    }
+    };
 
        
 // ========================================================
@@ -1231,7 +1231,9 @@ function renderizarDetalheScrim(scrim) {
             </div>
         </div>
         
-        <div class="scrim-rounds-container" id="rounds-scroll" style="display:flex; flex-wrap:wrap; gap:10px; overflow:visible; max-height:none; width:100%; margin-top: 20px;">
+        <aside class="scrim-matches-sidebar">
+            <div class="scrim-matches-title">PARTIDAS JOGADAS <span>${scrim.roundsMD3.length}</span></div>
+            <div class="scrim-rounds-container" id="rounds-scroll">
         ${scrim.roundsMD3.map((r, i) => {
             let venceuA = r.vencedor === r.tAId;
             let corRound = venceuA ? 'var(--winrate-color, #2ecc71)' : 'var(--loss-color, #e74c3c)';
@@ -1247,7 +1249,8 @@ function renderizarDetalheScrim(scrim) {
                 <span style="display:block; margin-top:4px; font-size:11px; font-weight:900; color:${corRound}; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${nomeVencedorRound}">${nomeVencedorRound}</span>
             </div>`;
         }).join('')}
-        </div>
+            </div>
+        </aside>
         <div id="round-view-container" style="margin-top: 25px;"></div>
     `;
     window.scrimAtual = scrim; 
@@ -1339,17 +1342,49 @@ container.innerHTML = `
             min-width: 0;
         }
 
-        #scrims-detalhe > .scrim-rounds-container {
+        #scrims-detalhe > .scrim-matches-sidebar {
             grid-column: 1;
             grid-row: 3;
+            width: 100% !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+            box-sizing: border-box;
+            background: var(--bg-cards, #181820);
+            border: 1px solid var(--borda-destaque, #30303b);
+            border-radius: 10px;
+            padding: 10px;
+            position: sticky;
+            top: 12px;
+            align-self: start;
+            overflow: hidden;
+        }
+
+        .scrim-matches-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 900;
+            padding: 2px 2px 9px;
+            border-bottom: 1px solid var(--borda-destaque, #30303b);
+            margin-bottom: 8px;
+        }
+
+        .scrim-matches-title span {
+            color: var(--accent-purple, #d000ff);
+        }
+
+        #scrims-detalhe .scrim-rounds-container {
             width: 100% !important;
             min-width: 0 !important;
             max-width: 100% !important;
             display: flex !important;
             flex-direction: column !important;
             flex-wrap: nowrap !important;
-            gap: 10px !important;
-            margin-top: 0 !important;
+            gap: 8px !important;
+            margin: 0 !important;
             overflow-x: hidden !important;
             overflow-y: auto !important;
             max-height: 430px !important;
@@ -1494,7 +1529,11 @@ container.innerHTML = `
                 gap: 10px;
             }
 
-            #scrims-detalhe > .scrim-rounds-container {
+            #scrims-detalhe > .scrim-matches-sidebar {
+                padding: 8px;
+            }
+
+            #scrims-detalhe .scrim-rounds-container {
                 max-height: 420px !important;
             }
 
@@ -1529,6 +1568,11 @@ container.innerHTML = `
             .scrim-detail-header div[style*="font-size:42px"] {
                 font-size: clamp(24px, 7vw, 38px) !important;
                 line-height: 1 !important;
+            }
+
+            .scrim-matches-title {
+                font-size: 9px !important;
+                padding-bottom: 7px;
             }
 
             .scrim-round-btn {
@@ -1592,7 +1636,11 @@ container.innerHTML = `
                 gap: 5px;
             }
 
-            #scrims-detalhe > .scrim-rounds-container {
+            #scrims-detalhe > .scrim-matches-sidebar {
+                padding: 6px;
+            }
+
+            #scrims-detalhe .scrim-rounds-container {
                 max-height: 360px !important;
             }
 
