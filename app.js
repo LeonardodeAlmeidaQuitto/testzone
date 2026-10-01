@@ -1290,8 +1290,14 @@ container.innerHTML = `
                 }).join('')}
             </div>
             
-            <div style="text-align:center;">
-                <img src="element/maps/${formatImg(roundMD3.mapa)}.png" style="width: 250px; border-radius: 10px; object-fit: cover; border: 2px solid var(--borda-destaque);" onerror="fallbackImagem(this,'element/maps/default.png')">
+            <div class="scrim-map-wrap" style="text-align:center; position:relative;">
+                <div class="scrim-map-image-box">
+                    <img src="element/maps/${formatImg(roundMD3.mapa)}.png" class="scrim-map-image" onerror="fallbackImagem(this,'element/maps/default.png')">
+                    <div class="scrim-map-overlay">
+                        <img src="element/modes/${formatImg(roundMD3.modo)}.png" class="scrim-mode-icon" onerror="this.style.display='none'">
+                        <div class="scrim-pick-order" title="Ordem de escolha: ${roundMD3.tANome}">1</div>
+                    </div>
+                </div>
                 <p style="margin-top:10px; font-size:14px; color:var(--texto-secundario); font-weight:bold;">
                     ${roundMD3.mapa.toUpperCase()}
                 </p>
@@ -1317,8 +1323,8 @@ container.innerHTML = `
 
 // ========================================================
 // RESPONSIVIDADE DA TELA SCRIMS
-// Mantém a mesma composição visual do PC e adapta apenas
-// larguras/tamanhos para tablet e celular.
+// Rounds = sidebar lateral. Conteúdo do round = mapa + picks ao lado.
+// A mesma composição é mantida em PC/tablet/mobile, apenas escalando dimensões.
 // ========================================================
 (function aplicarResponsividadeScrims() {
     if (document.getElementById('scrims-responsive-style')) return;
@@ -1326,37 +1332,48 @@ container.innerHTML = `
     const style = document.createElement('style');
     style.id = 'scrims-responsive-style';
     style.textContent = `
-        /* Base: a barra de partidas fica lateral ao conteúdo, como no PC */
         #scrims-detalhe {
             width: 100%;
             min-width: 0;
-            display: grid;
-            grid-template-columns: 150px minmax(0, 1fr);
-            gap: 14px;
-            align-items: start;
+            display: grid !important;
+            grid-template-columns: minmax(145px, 175px) minmax(0, 1fr) !important;
+            grid-template-rows: auto auto !important;
+            gap: 14px !important;
+            align-items: start !important;
         }
 
         #scrims-detalhe > button,
         #scrims-detalhe > .scrim-detail-header {
-            grid-column: 1 / -1;
+            grid-column: 1 / -1 !important;
+            grid-row: auto !important;
             min-width: 0;
         }
 
         #scrims-detalhe > .scrim-matches-sidebar {
-            grid-column: 1;
-            grid-row: 3;
+            grid-column: 1 !important;
+            grid-row: 3 !important;
             width: 100% !important;
             min-width: 0 !important;
             max-width: 100% !important;
-            box-sizing: border-box;
+            box-sizing: border-box !important;
             background: var(--bg-cards, #181820);
             border: 1px solid var(--borda-destaque, #30303b);
             border-radius: 10px;
             padding: 10px;
-            position: sticky;
+            position: sticky !important;
             top: 12px;
-            align-self: start;
-            overflow: hidden;
+            align-self: start !important;
+            overflow: hidden !important;
+            z-index: 2;
+        }
+
+        #scrims-detalhe > #round-view-container {
+            grid-column: 2 !important;
+            grid-row: 3 !important;
+            min-width: 0 !important;
+            width: 100% !important;
+            margin-top: 0 !important;
+            align-self: start !important;
         }
 
         .scrim-matches-title {
@@ -1372,9 +1389,7 @@ container.innerHTML = `
             margin-bottom: 8px;
         }
 
-        .scrim-matches-title span {
-            color: var(--accent-purple, #d000ff);
-        }
+        .scrim-matches-title span { color: var(--accent-purple, #d000ff); }
 
         #scrims-detalhe .scrim-rounds-container {
             width: 100% !important;
@@ -1387,16 +1402,8 @@ container.innerHTML = `
             margin: 0 !important;
             overflow-x: hidden !important;
             overflow-y: auto !important;
-            max-height: 430px !important;
-            padding-right: 2px;
-        }
-
-        #scrims-detalhe > #round-view-container {
-            grid-column: 2;
-            grid-row: 3;
-            min-width: 0;
-            width: 100%;
-            margin-top: 0 !important;
+            max-height: 560px !important;
+            padding-right: 3px !important;
         }
 
         .scrim-round-btn {
@@ -1404,7 +1411,8 @@ container.innerHTML = `
             min-width: 0 !important;
             flex: 0 0 auto !important;
             padding: 10px !important;
-            overflow: hidden;
+            overflow: hidden !important;
+            box-sizing: border-box !important;
         }
 
         .scrim-round-btn img {
@@ -1415,65 +1423,50 @@ container.innerHTML = `
             margin: 2px auto 0;
         }
 
-        .scrim-round-btn > div {
-            min-width: 0;
-            flex-wrap: wrap;
-        }
-
-        .scrim-round-btn span {
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
+        .scrim-round-btn > div { min-width: 0; flex-wrap: wrap; }
+        .scrim-round-btn span { overflow: hidden; text-overflow: ellipsis; }
 
         .scrim-detail-header > div:first-child {
             width: 100%;
             min-width: 0;
             justify-content: center !important;
-            gap: clamp(18px, 4vw, 40px) !important;
+            gap: clamp(22px, 5vw, 55px) !important;
         }
 
         .scrim-detail-header img {
-            max-width: min(145px, 18vw);
+            max-width: min(160px, 18vw);
         }
 
         .round-details-view {
-            width: 100%;
-            min-width: 0;
-            overflow: hidden;
+            width: 100% !important;
+            min-width: 0 !important;
+            overflow: hidden !important;
+            box-sizing: border-box !important;
         }
 
         .picks-container {
             width: 100% !important;
-            min-width: 0;
+            min-width: 0 !important;
             display: grid !important;
-            grid-template-columns: minmax(0, 1fr) minmax(90px, 34%) minmax(0, 1fr) !important;
+            grid-template-columns: minmax(120px, 1fr) minmax(250px, 330px) minmax(120px, 1fr) !important;
             align-items: center !important;
             justify-items: center !important;
-            gap: clamp(8px, 2vw, 40px) !important;
-            margin-top: 8px !important;
+            gap: clamp(18px, 4vw, 55px) !important;
+            margin-top: 5px !important;
         }
 
-        .picks-container > div {
-            min-width: 0;
-            max-width: 100%;
-        }
-
+        .picks-container > div { min-width: 0; max-width: 100%; }
         .picks-container > div:first-child,
         .picks-container > div:last-child {
             width: 100%;
             align-items: center !important;
-            gap: clamp(7px, 1.5vw, 15px) !important;
-        }
-
-        .picks-container > div:first-child > div,
-        .picks-container > div:last-child > div {
-            max-width: 100%;
+            gap: 12px !important;
         }
 
         .picks-container > div:first-child img,
         .picks-container > div:last-child img {
-            width: clamp(42px, 6vw, 75px) !important;
-            height: clamp(42px, 6vw, 75px) !important;
+            width: clamp(78px, 7vw, 105px) !important;
+            height: clamp(78px, 7vw, 105px) !important;
         }
 
         .picks-container > div:first-child span:last-child,
@@ -1482,187 +1475,133 @@ container.innerHTML = `
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            font-size: clamp(8px, 1.2vw, 12px) !important;
+            font-size: clamp(9px, 1vw, 13px) !important;
         }
 
         .picks-container > div:first-child > div > span:first-child,
         .picks-container > div:last-child > div > span:first-child {
-            font-size: clamp(7px, 1vw, 10px) !important;
-            padding: 2px 4px !important;
-            top: -5px !important;
-            left: -4px !important;
+            font-size: clamp(8px, .9vw, 11px) !important;
+            padding: 2px 5px !important;
+            top: -6px !important;
+            left: -5px !important;
         }
 
         .picks-container > div:nth-child(2) {
-            width: 100%;
-            max-width: 250px;
+            width: 100% !important;
+            max-width: 330px !important;
         }
 
-        .picks-container > div:nth-child(2) img {
-            width: clamp(90px, 22vw, 250px) !important;
-            max-width: 100% !important;
+        .scrim-map-wrap { width: 100%; }
+
+        .scrim-map-image-box {
+            position: relative;
+            width: min(330px, 100%);
+            margin: 0 auto;
+            display: inline-block;
+        }
+
+        .scrim-map-image {
+            display: block;
+            width: 100% !important;
+            max-width: 330px !important;
             height: auto !important;
-            max-height: 330px;
+            max-height: 430px !important;
             object-fit: contain !important;
+            border-radius: 10px;
+            border: 2px solid var(--borda-destaque);
         }
 
-        .picks-container > div:nth-child(2) p {
-            font-size: clamp(8px, 1.3vw, 14px) !important;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+        .scrim-map-overlay {
+            position: absolute;
+            top: 7px;
+            left: 7px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            z-index: 4;
         }
 
-        /* Evita que listas/cards do modo Scrims criem largura maior que a tela. */
-        #scrims-lista,
-        #scrims-detalhe,
-        #round-view-container,
-        .round-details-view,
-        .scrim-card {
-            max-width: 100%;
-            box-sizing: border-box;
+        .scrim-mode-icon {
+            width: 30px !important;
+            height: 30px !important;
+            object-fit: contain !important;
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,.65));
         }
 
-        @media (max-width: 900px) {
-            #scrims-detalhe {
-                grid-template-columns: clamp(100px, 23vw, 130px) minmax(0, 1fr);
-                gap: 10px;
-            }
-
-            #scrims-detalhe > .scrim-matches-sidebar {
-                padding: 8px;
-            }
-
-            #scrims-detalhe .scrim-rounds-container {
-                max-height: 420px !important;
-            }
-
-            .scrim-detail-header img {
-                height: clamp(60px, 11vw, 100px) !important;
-                width: clamp(70px, 14vw, 125px) !important;
-            }
+        .scrim-pick-order {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(10,10,15,.88);
+            border: 2px solid #fff;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 900;
+            box-shadow: 0 2px 5px rgba(0,0,0,.6);
         }
 
-        @media (max-width: 600px) {
-            #scrims-detalhe {
-                grid-template-columns: clamp(82px, 24vw, 105px) minmax(0, 1fr);
-                gap: 7px;
-            }
-
-            #scrims-detalhe > button {
-                justify-self: start;
-                margin-bottom: 10px !important;
-                padding: 6px 12px !important;
-                font-size: 10px !important;
-            }
-
-            .scrim-detail-header > div:first-child {
-                gap: clamp(8px, 3vw, 18px) !important;
-            }
-
-            .scrim-detail-header img {
-                height: clamp(48px, 13vw, 72px) !important;
-                width: clamp(58px, 16vw, 90px) !important;
-            }
-
-            .scrim-detail-header div[style*="font-size:42px"] {
-                font-size: clamp(24px, 7vw, 38px) !important;
-                line-height: 1 !important;
-            }
-
-            .scrim-matches-title {
-                font-size: 9px !important;
-                padding-bottom: 7px;
-            }
-
-            .scrim-round-btn {
-                padding: 7px 5px !important;
-                border-radius: 7px !important;
-            }
-
-            .scrim-round-btn img {
-                width: 24px !important;
-                height: 24px !important;
-            }
-
-            .scrim-round-btn > div span:first-child {
-                font-size: 10px !important;
-            }
-
-            .scrim-round-btn > div span:last-child {
-                font-size: 8px !important;
-            }
-
-            .scrim-round-btn > span {
-                font-size: 8px !important;
-                max-width: 100% !important;
-            }
-
-            .round-details-view {
-                padding: clamp(8px, 2.5vw, 16px) !important;
-                border-radius: 9px !important;
-            }
-
+        @media (max-width: 1100px) {
+            #scrims-detalhe { grid-template-columns: 140px minmax(0, 1fr) !important; }
             .picks-container {
-                grid-template-columns: minmax(0, 1fr) minmax(72px, 31%) minmax(0, 1fr) !important;
-                gap: 4px !important;
+                grid-template-columns: minmax(85px, 1fr) minmax(180px, 280px) minmax(85px, 1fr) !important;
+                gap: 12px !important;
             }
-
             .picks-container > div:first-child img,
             .picks-container > div:last-child img {
-                width: clamp(32px, 10vw, 52px) !important;
-                height: clamp(32px, 10vw, 52px) !important;
+                width: 72px !important;
+                height: 72px !important;
             }
+            .scrim-map-image-box { width: min(280px, 100%); }
+            .scrim-map-image { max-width: 280px !important; max-height: 360px !important; }
+        }
 
+        @media (max-width: 700px) {
+            #scrims-detalhe {
+                grid-template-columns: clamp(86px, 24vw, 115px) minmax(0, 1fr) !important;
+                gap: 7px !important;
+            }
+            #scrims-detalhe > .scrim-matches-sidebar { padding: 7px !important; }
+            #scrims-detalhe .scrim-rounds-container { max-height: 440px !important; }
+            .scrim-round-btn { padding: 7px 5px !important; }
+            .scrim-round-btn img { width: 24px !important; height: 24px !important; }
+            .scrim-detail-header > div:first-child { gap: 10px !important; }
+            .scrim-detail-header img { height: 62px !important; width: 76px !important; }
+            .scrim-detail-header div[style*="font-size:42px"] { font-size: 28px !important; line-height: 1 !important; }
+            .scrim-matches-title { font-size: 9px !important; }
+            .picks-container {
+                grid-template-columns: minmax(55px, 1fr) minmax(95px, 29%) minmax(55px, 1fr) !important;
+                gap: 4px !important;
+            }
             .picks-container > div:first-child,
-            .picks-container > div:last-child {
-                gap: 5px !important;
+            .picks-container > div:last-child { gap: 5px !important; }
+            .picks-container > div:first-child img,
+            .picks-container > div:last-child img {
+                width: clamp(38px, 10vw, 55px) !important;
+                height: clamp(38px, 10vw, 55px) !important;
             }
-
-            .picks-container > div:nth-child(2) img {
-                width: clamp(68px, 23vw, 145px) !important;
-                max-height: 250px;
-            }
-
-            .picks-container > div:nth-child(2) p {
-                margin-top: 5px !important;
-                font-size: 8px !important;
-            }
+            .picks-container > div:first-child span:last-child,
+            .picks-container > div:last-child span:last-child { font-size: 8px !important; }
+            .scrim-map-image-box { width: min(155px, 100%); }
+            .scrim-map-image { max-width: 155px !important; max-height: 255px !important; }
+            .scrim-map-overlay { top: 4px; left: 4px; gap: 3px; }
+            .scrim-mode-icon { width: 21px !important; height: 21px !important; }
+            .scrim-pick-order { width: 19px; height: 19px; font-size: 9px; border-width: 1px; }
         }
 
         @media (max-width: 380px) {
-            #scrims-detalhe {
-                grid-template-columns: 76px minmax(0, 1fr);
-                gap: 5px;
-            }
-
-            #scrims-detalhe > .scrim-matches-sidebar {
-                padding: 6px;
-            }
-
-            #scrims-detalhe .scrim-rounds-container {
-                max-height: 360px !important;
-            }
-
-            .scrim-round-btn > div {
-                display: block !important;
-            }
-
-            .scrim-round-btn > div span {
-                display: block;
-                text-align: center;
-                width: 100%;
-            }
-
-            .picks-container > div:nth-child(2) img {
-                width: 70px !important;
-            }
-
+            #scrims-detalhe { grid-template-columns: 76px minmax(0, 1fr) !important; gap: 5px !important; }
+            #scrims-detalhe > .scrim-matches-sidebar { padding: 5px !important; }
+            #scrims-detalhe .scrim-rounds-container { max-height: 360px !important; }
+            .scrim-round-btn > div { display: block !important; }
+            .scrim-round-btn > div span { display: block; text-align: center; width: 100%; }
+            .scrim-map-image-box { width: 125px; }
+            .scrim-map-image { max-width: 125px !important; max-height: 220px !important; }
             .picks-container > div:first-child img,
-            .picks-container > div:last-child img {
-                width: 29px !important;
-                height: 29px !important;
-            }
+            .picks-container > div:last-child img { width: 32px !important; height: 32px !important; }
         }
     `;
     document.head.appendChild(style);
