@@ -1230,6 +1230,7 @@ function renderizarDetalheScrim(scrim) {
             let venceuA = r.vencedor === r.tAId;
             let corRound = venceuA ? 'var(--winrate-color, #2ecc71)' : 'var(--loss-color, #e74c3c)';
             let nomeVencedorRound = venceuA ? r.tANome : r.tBNome;
+            let idVencedorRound = venceuA ? r.tAId : r.tBId;
             return `<div class="scrim-round-btn ${i === 0 ? 'active' : ''}" onclick="window.selecionarRoundMD3(${i}, this)" style="flex:0 0 auto; padding: 10px;">
                 <div style="display: flex; align-items: baseline; gap: 6px; margin-bottom: 5px;">
                     <!-- Número do round maior -->
@@ -1237,7 +1238,10 @@ function renderizarDetalheScrim(scrim) {
                     <!-- Placar de Sets ao lado e menor -->
                     <span style="font-size:11px; font-weight:bold; color:var(--texto-secundario);">(Sets: ${r.scoreA}-${r.scoreB})</span>
                 </div>
-                <img src="element/modes/${formatImg(r.modo)}.png" onerror="fallbackImagem(this,'element/modes/default.png')">
+                <div class="scrim-round-team-logo-wrap" title="${nomeVencedorRound}">
+                    <img class="scrim-round-team-logo" src="${teamLogoUrl(idVencedorRound)}" onerror="${teamLogoOnError(idVencedorRound)}">
+                    <img class="scrim-round-mode-logo" src="element/modes/${formatImg(r.modo)}.png" onerror="this.style.display='none'" title="${r.modo}">
+                </div>
                 <span style="display:block; margin-top:4px; font-size:11px; font-weight:900; color:${corRound}; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${nomeVencedorRound}">${nomeVencedorRound}</span>
             </div>`;
         }).join('')}
